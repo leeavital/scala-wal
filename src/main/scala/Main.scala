@@ -31,18 +31,19 @@ trait JournalingWriter[T] {
   def run[R](log: T, action: () => R): Option[R]
 }
 
-trait Journal[T] {
-  def log(in: T): Unit
+trait Journal {
+  type Bytes = Array[Byte]
+  def log(in: Bytes): Unit
 
-  def allLogs(): List[T]
+  def allLogs(): List[Bytes]
 }
 
 object InMemoryJournal {
-  def apply[T](): Journal[T] = {
-    val lst = collection.mutable.ArrayBuffer.empty[T]
-    new Journal[T] {
-      override def log(in: T): Unit = {
-        println(s"logging ${in}")
+  def apply(): Journal = {
+    val lst = collection.mutable.ArrayBuffer.empty[Array[Byte]]
+    new Journal {
+      override def log(in: Array[Byte]): Unit = {
+        println(s"logging ${new String(in)}")
         lst += in
       }
 
@@ -58,12 +59,13 @@ object JournalingWriter {
   def apply[T](
     codec: Codec[T, Array[Byte]],
     rollback: Function[T, Unit],
-    journal: Journal[T]
+    journal: Journal
   ): JournalingWriter[T] = {
 
     new JournalingWriter[T] {
       override def run[R](log: T, fn: () => R) = {
-        journal.log(log)
+        val bs = codec.serialize(log)
+        journal.log(bs)
         try {
           Option(fn())
         } catch {
