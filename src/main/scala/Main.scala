@@ -1,3 +1,6 @@
+import java.io.{FileOutputStream}
+import java.nio.charset.Charset
+
 case class DoSet(key: String, value: Integer)
 
 object DoSetCodec extends Codec[DoSet, Array[Byte]] {
@@ -54,6 +57,26 @@ object InMemoryJournal {
   }
 }
 
+object FileBasedJournal {
+  def apply(filePath: String): Journal = {
+    val fd =  new java.io.File(filePath)
+    val os = new FileOutputStream(fd)
+
+    new Journal {
+      override def log(bs: Array[Byte]) = {
+        os.write(bs)
+        os.write("\n".getBytes)
+      }
+
+      override def allLogs = {
+        val source = io.Source.fromFile(fd, Charset.defaultCharset().toString)
+        val lines : Iterator[Array[Byte]] = source.getLines().map(string => string.getBytes)
+        lines.toList
+      }
+    }
+  }
+}
+
 object JournalingWriter {
 
   def apply[T](
@@ -90,7 +113,7 @@ object Main extends App {
     (ev: DoSet) => {
       println(s"rolling back ${ev}")
     },
-    InMemoryJournal()
+    FileBasedJournal("wal.log")
   )
 
   writer.run[Unit](DoSet("a", 2), () => {
