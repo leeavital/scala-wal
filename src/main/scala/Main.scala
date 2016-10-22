@@ -81,8 +81,6 @@ object JournalingWriter {
 object Main extends App {
   println("Hello world")
 
-  println(DoSetCodec.deserialize(DoSetCodec.serialize(DoSet("a", 4))))
-
   val map = collection.mutable.Map.empty[String, Integer]
 
   val writer = JournalingWriter(
