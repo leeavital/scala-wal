@@ -21,7 +21,7 @@ object Main extends App {
 
   val map = collection.mutable.Map.empty[String, Integer]
 
-  val writer = JournalingWriter(
+  val writer = new JournalingWriter(
     DoSetCodec,
     (ev: DoSet) => {
       println(s"rolling back ${ev}")
@@ -29,7 +29,11 @@ object Main extends App {
     FileBasedJournal("wal.log")
   )
 
+  writer.repair
+
+
   writer.run[Unit](DoSet("a", 2), () => {
-    throw new RuntimeException("failed to set a=2")
+    println("system will crash!")
+    System.exit(1)
   })
 }
