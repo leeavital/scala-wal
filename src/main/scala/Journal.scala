@@ -1,4 +1,4 @@
-import java.io.{FileNotFoundException, File}
+import java.io.File
 
 import com.leeavital.{WALEntry => AvroWalEntry}
 import org.apache.avro.file.{DataFileReader, DataFileWriter}
@@ -50,26 +50,21 @@ class FileBasedJournal(filePath: String) extends Journal {
     dataFileWriter.create(AvroWalEntry.getClassSchema, file)
   }
 
-
-  val fd = new java.io.File(filePath)
-
   override def log(entry: WALEntry) = {
-    val avro = WALEntryCodec.serialize(entry)
-    dataFileWriter.append(avro)
+    val avroEntry = WALEntryCodec.serialize(entry)
+    dataFileWriter.append(avroEntry)
     dataFileWriter.fSync()
   }
 
   override def allLogs = {
     import scala.collection.JavaConverters._
 
-    try {
-      val dataFilereader = DataFileReader.openReader(new File(filePath), reader)
-      dataFilereader.iterator().asScala.map(WALEntryCodec.deserialize).toList
-    } catch {
-      case (e: FileNotFoundException) => {
-        println("no file found, assumping first startup")
-        List()
-      }
+    if (file.exists()) {
+      val dataFileReader = DataFileReader.openReader(new File(filePath), reader)
+      dataFileReader.iterator().asScala.map(WALEntryCodec.deserialize).toList
+    } else {
+      println("no file found, assuming first startup")
+      List()
     }
   }
 }

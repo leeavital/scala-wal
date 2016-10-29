@@ -17,8 +17,6 @@ object DoSetCodec extends Codec[DoSet, Array[Byte]] {
 
 
 object Main extends App {
-
-
   println("Hello world")
 
   val map = collection.mutable.Map.empty[String, Integer]
