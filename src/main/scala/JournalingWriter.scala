@@ -21,15 +21,15 @@ class JournalingWriter[T](
     val data = codec.serialize(log)
     val startTx = Begin(txId, data)
 
-    journal.log(WALEntryCodec.serialize(startTx))
+    journal.log(startTx)
     try {
       Option(fn())
-      journal.log(WALEntryCodec.serialize(Commit(txId)))
+      journal.log(Commit(txId))
     } catch {
       case (e: Throwable) => {
         println(s"caught '${e.getMessage}', rolling back?")
         rollback(log)
-        journal.log(WALEntryCodec.serialize(Rollback(txId)))
+        journal.log(Rollback(txId))
         None
       }
     }
@@ -39,7 +39,7 @@ class JournalingWriter[T](
     * Read the log and rollback any uncommited and unrolled back transactions. This should be called on startup.
     */
   def repair = {
-    val entries = journal.allLogs().toList.map(WALEntryCodec.deserialize)
+    val entries = journal.allLogs()
 
     val finishedTransactions = entries.flatMap {
       case Commit(tx) => Some(tx)
@@ -62,7 +62,7 @@ class JournalingWriter[T](
       val data = codec.deserialize(begin.data)
       println(s"rolling back ${begin.txId}")
       rollback(data)
-      journal.log(WALEntryCodec.serialize(Rollback(begin.txId)))
+      journal.log(Rollback(begin.txId))
     })
   }
 }

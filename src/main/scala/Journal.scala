@@ -1,12 +1,13 @@
-import java.io.FileOutputStream
-import java.nio.charset.Charset
+import java.io.{FileNotFoundException, File}
+
+import com.leeavital.{WALEntry => AvroWalEntry}
+import org.apache.avro.file.{DataFileReader, DataFileWriter}
+import org.apache.avro.specific.{SpecificDatumReader, SpecificDatumWriter}
 
 trait Journal {
-  type Bytes = Array[Byte]
+  def log(in: WALEntry): Unit
 
-  def log(in: Bytes): Unit
-
-  def allLogs(): List[Bytes]
+  def allLogs(): List[WALEntry]
 }
 
 object InMemoryJournal {
@@ -16,10 +17,10 @@ object InMemoryJournal {
 }
 
 class InMemoryJournal extends Journal {
-  val lst = collection.mutable.ArrayBuffer.empty[Array[Byte]]
+  val lst = collection.mutable.ArrayBuffer.empty[WALEntry]
 
-  override def log(in: Array[Byte]): Unit = {
-    println(s"logging ${new String(in)}")
+  override def log(in: WALEntry): Unit = {
+    println(s"logging ${in}")
     lst += in
   }
 
@@ -29,25 +30,44 @@ class InMemoryJournal extends Journal {
 }
 
 object FileBasedJournal {
-  def apply(filePath: String): Journal = {
-    new FileBasedJournal(filePath)
-  }
-}
 
+  def apply(filePath: String) = new FileBasedJournal(filePath)
+}
 
 class FileBasedJournal(filePath: String) extends Journal {
 
-  val fd = new java.io.File(filePath)
-  val os = new FileOutputStream(fd, true)
+  val writer = new SpecificDatumWriter[AvroWalEntry](AvroWalEntry.getClassSchema)
+  val reader = new SpecificDatumReader[AvroWalEntry](AvroWalEntry.getClassSchema)
 
-  override def log(bs: Array[Byte]) = {
-    os.write(bs)
-    os.write("\n".getBytes)
+  val dataFileWriter = new DataFileWriter[AvroWalEntry](writer)
+  val file = new File(filePath)
+
+  if (file.exists()) {
+    dataFileWriter.appendTo(file)
+  } else {
+    dataFileWriter.create(AvroWalEntry.getClassSchema, file)
+  }
+
+
+  val fd = new java.io.File(filePath)
+
+  override def log(entry: WALEntry) = {
+    val avro = WALEntryCodec.serialize(entry)
+    dataFileWriter.append(avro)
+    dataFileWriter.fSync()
   }
 
   override def allLogs = {
-    val source = io.Source.fromFile(fd, Charset.defaultCharset().toString)
-    val lines: Iterator[Array[Byte]] = source.getLines().map(string => string.getBytes)
-    lines.toList
+    import scala.collection.JavaConverters._
+
+    try {
+      val dataFilereader = DataFileReader.openReader(new File(filePath), reader)
+      dataFilereader.iterator().asScala.map(WALEntryCodec.deserialize).toList
+    } catch {
+      case (e: FileNotFoundException) => {
+        println("no file found, assumping first startup")
+        List()
+      }
+    }
   }
 }
