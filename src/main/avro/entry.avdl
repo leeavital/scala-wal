@@ -1,0 +1,12 @@
+@namespace("com.leeavital")
+protocol WALProtocol {
+  enum EntryType {
+    Begin, Commit, Rollback
+  }
+
+  record WALEntry {
+    EntryType type;
+    long txId;
+    union {null, bytes} data = null;
+  }
+}
