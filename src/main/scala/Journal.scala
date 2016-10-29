@@ -3,6 +3,7 @@ import java.io.File
 import com.leeavital.{WALEntry => AvroWalEntry}
 import org.apache.avro.file.{DataFileReader, DataFileWriter}
 import org.apache.avro.specific.{SpecificDatumReader, SpecificDatumWriter}
+import org.slf4j.LoggerFactory
 
 trait Journal {
   def log(in: WALEntry): Unit
@@ -17,10 +18,11 @@ object InMemoryJournal {
 }
 
 class InMemoryJournal extends Journal {
+  val log = LoggerFactory.getLogger(this.getClass)
+
   val lst = collection.mutable.ArrayBuffer.empty[WALEntry]
 
   override def log(in: WALEntry): Unit = {
-    println(s"logging ${in}")
     lst += in
   }
 
@@ -38,6 +40,9 @@ object FileBasedJournal {
 
 class FileBasedJournal(filePath: String) extends Journal {
 
+  val log = LoggerFactory.getLogger(this.getClass)
+  val eventLog = LoggerFactory.getLogger("wal.event")
+
   val writer = new SpecificDatumWriter[AvroWalEntry](AvroWalEntry.getClassSchema)
   val reader = new SpecificDatumReader[AvroWalEntry](AvroWalEntry.getClassSchema)
 
@@ -51,6 +56,9 @@ class FileBasedJournal(filePath: String) extends Journal {
   }
 
   override def log(entry: WALEntry) = {
+    if (eventLog.isDebugEnabled) {
+      eventLog.debug("will log: {}", entry)
+    }
     val avroEntry = WALEntryCodec.serialize(entry)
     dataFileWriter.append(avroEntry)
     dataFileWriter.fSync()
@@ -63,7 +71,7 @@ class FileBasedJournal(filePath: String) extends Journal {
       val dataFileReader = DataFileReader.openReader(new File(filePath), reader)
       dataFileReader.iterator().asScala.map(WALEntryCodec.deserialize).toList
     } else {
-      println("no file found, assuming first startup")
+      log.info("no file found, assuming first startup")
       List()
     }
   }
