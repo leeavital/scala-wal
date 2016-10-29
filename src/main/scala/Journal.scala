@@ -31,7 +31,9 @@ class InMemoryJournal extends Journal {
 
 object FileBasedJournal {
 
-  def apply(filePath: String) = new FileBasedJournal(filePath)
+  def apply(filePath: String) = {
+    new FileBasedJournal(filePath)
+  }
 }
 
 class FileBasedJournal(filePath: String) extends Journal {
