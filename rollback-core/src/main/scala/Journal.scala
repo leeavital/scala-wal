@@ -60,8 +60,12 @@ class FileBasedJournal(filePath: String) extends Journal {
       eventLog.debug("will log: {}", entry)
     }
     val avroEntry = WALEntryCodec.serialize(entry)
-    dataFileWriter.append(avroEntry)
-    dataFileWriter.fSync()
+
+    // todo: make this better?
+    this.synchronized {
+      dataFileWriter.append(avroEntry)
+      dataFileWriter.fSync()
+    }
   }
 
   override def allLogs = {

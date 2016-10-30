@@ -1,3 +1,4 @@
 rootProject.name = 'rollback'
 
 include ":rollback-core"
+include ":rollback-example"
