@@ -23,6 +23,8 @@ dependencies {
     runtime 'ch.qos.logback:logback-classic:1.1.7'
 
     testCompile 'junit:junit:4.12'
+    testCompile "org.scalatest:scalatest_2.11:3.0.0"
+
 }
 
 buildscript {
