@@ -11,7 +11,7 @@ class JournalSpec extends Spec {
   val bytesTwo = "two".getBytes(Charset.defaultCharset())
 
 
-  val file = System.getProperty("java.io.tmpdir") + s"temp-wal-${UUID.randomUUID().toString}"
+  val file = s"temp-wal-${UUID.randomUUID().toString}"
 
   lazy val log = FileBasedJournal(file)
 
