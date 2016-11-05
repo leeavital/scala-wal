@@ -28,7 +28,7 @@ class JournalingWriterSpec extends Spec {
     "upon operations succeeding" - {
       val (writer, rollbacks, journal) = fixtures
 
-      writer.run("hello", () => {
+      val result = writer.run("hello", () => {
         println("no op")
       })
 
@@ -47,6 +47,10 @@ class JournalingWriterSpec extends Spec {
         }
       }
 
+      "should return the right thing" in {
+         result should be(true)
+      }
+
       "should not rollback anything" in {
         rollbacks shouldBe empty
       }
@@ -55,7 +59,7 @@ class JournalingWriterSpec extends Spec {
     "upon operations failing" - {
       val (writer, rollbacks, journal) = fixtures
 
-      writer.run("goodbye", () => {
+      val result = writer.run("goodbye", () => {
         throw new RuntimeException()
       })
 
@@ -67,6 +71,10 @@ class JournalingWriterSpec extends Spec {
 
             rollbacks should be(Set("goodbye"))
         }
+      }
+
+      "should return the right thing" in {
+          result should be(false)
       }
     }
   }

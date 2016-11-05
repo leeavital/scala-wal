@@ -15,7 +15,7 @@ class JournalingWriter[T](
     *
     * The action will not be run until the log is written.
     */
-  def run[R](log: T, fn: () => R) = {
+  def run[R](log: T, fn: () => R): Boolean = {
     val txId = seed.nextLong()
 
     val data = codec.serialize(log)
@@ -25,12 +25,13 @@ class JournalingWriter[T](
     try {
       Option(fn())
       journal.log(Commit(txId))
+      true
     } catch {
       case (e: Throwable) => {
         println(s"caught '${e.getMessage}', rolling back?")
         rollback(log)
         journal.log(Rollback(txId))
-        None
+        false
       }
     }
   }
